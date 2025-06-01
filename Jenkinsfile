@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         NODE_VERSION = '20.17.0'
-        PR_NUMBER = "${env.CHANGE_ID ?: 'dev'}" // fallback for branch builds
+        PR_NUMBER = "${env.CHANGE_ID ?: 'dev'}"
         IMAGE_TAG = "aashrayankasetty/firewallcheck:${env.CHANGE_ID ?: 'dev'}"
     }
 
