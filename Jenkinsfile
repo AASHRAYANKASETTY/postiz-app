@@ -27,8 +27,12 @@ pipeline {
 
     stage('Install Dependencies') {
       steps {
-        sh 'npm ci --legacy-peer-deps'
-      }
+          sh '''
+            apt-get update
+            apt-get install -y python3 make g++
+            npm ci --legacy-peer-deps
+          '''
+        }
     }
 
     stage('Build Project') {
