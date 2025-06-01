@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         NODE_VERSION = '20.17.0'
-        PR_NUMBER = "${env.CHANGE_ID}" // PR number comes from webhook payload
-        IMAGE_TAG="ghcr.io/gitroomhq/postiz-app-pr:${env.CHANGE_ID}"
+        PR_NUMBER = "${env.CHANGE_ID ?: 'dev'}" // fallback for branch builds
+        IMAGE_TAG = "aashrayankasetty/firewallcheck:${env.CHANGE_ID ?: 'dev'}"
     }
 
     stages {
@@ -34,37 +34,32 @@ pipeline {
                 sh 'npm run build'
             }
         }
-        
+
         stage('Build and Push Docker Image') {
-            when {
-                expression { return env.CHANGE_ID != null }  // Only run if it's a PR
-            }
             steps {
-                withCredentials([string(credentialsId: 'gh-pat', variable: 'GITHUB_PASS')]) {
-                    // Docker login step
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKERHUB_USER',
+                        passwordVariable: 'DOCKERHUB_PASS'
+                    )
+                ]) {
                     sh '''
-                        echo "$GITHUB_PASS" | docker login ghcr.io -u "egelhaus" --password-stdin
-                    '''
-                    // Build Docker image
-                    sh '''
+                        echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
                         docker build -f Dockerfile.dev -t $IMAGE_TAG .
-                    '''
-                    // Push Docker image to GitHub Container Registry
-                    sh '''
                         docker push $IMAGE_TAG
                     '''
                 }
             }
         }
     }
+
     post {
         success {
-            echo 'Build completed successfully!'
-
+            echo '✅ Build and Docker push completed successfully!'
         }
         failure {
-            echo 'Build failed!'
-
+            echo '❌ Build or push failed.'
         }
     }
 }
