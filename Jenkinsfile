@@ -27,13 +27,18 @@ pipeline {
 
     stage('Install Dependencies') {
       steps {
-          sh '''
-            apt-get update
-            apt-get install -y python3 make g++
-            npm ci --legacy-peer-deps
-          '''
-        }
+        sh '''
+          set -eux
+          echo "🛠 Updating apt and installing build tools"
+          apt-get update -y
+          DEBIAN_FRONTEND=noninteractive apt-get install -y python3 make g++
+          
+          echo "📦 Installing node modules"
+          npm ci --legacy-peer-deps
+        '''
+      }
     }
+
 
     stage('Build Project') {
       steps {
