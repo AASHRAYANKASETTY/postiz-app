@@ -8,6 +8,7 @@ pipeline {
   environment {
     PR_NUMBER = "${env.CHANGE_ID}"
     IMAGE_TAG = "ghcr.io/gitroomhq/postiz-app-pr:${env.CHANGE_ID}"
+    PYTHON = "/usr/bin/python3" // Added to satisfy node-gyp
   }
 
   stages {
