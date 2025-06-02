@@ -10,7 +10,7 @@ spec:
       emptyDir: {}
   containers:
     - name: node
-      image: node:20.17.0-alpine
+      image: node:20.17.0
       command: ['cat']
       tty: true
     - name: docker
@@ -60,15 +60,14 @@ spec:
             steps {
                 sh 'node -v'
                 sh 'npm -v'
-                sh 'corepack --version'
-                sh 'pnpm -v || true'
             }
         }
 
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    corepack enable
+                    set -e
+                    npm install -g pnpm
                     pnpm install --frozen-lockfile
                 '''
             }
