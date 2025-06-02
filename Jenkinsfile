@@ -32,9 +32,12 @@ pipeline {
           echo "🛠 Updating apt and installing build tools"
           apt-get update -y
           DEBIAN_FRONTEND=noninteractive apt-get install -y python3 make g++
-          
+
+          echo "📦 Installing pnpm"
+          npm install -g pnpm@10.6.1
+
           echo "📦 Installing node modules"
-          npm ci --legacy-peer-deps
+          pnpm install --frozen-lockfile
         '''
       }
     }
@@ -42,7 +45,7 @@ pipeline {
 
     stage('Build Project') {
       steps {
-        sh 'npm run build'
+        sh 'pnpm run build'
       }
     }
 
