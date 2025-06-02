@@ -1,71 +1,98 @@
 pipeline {
-    agent any
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  volumes:
+    - name: docker-graph-storage
+      emptyDir: {}
+  containers:
+    - name: node
+      image: node:20.17.0-alpine
+      command: ['cat']
+      tty: true
+    - name: docker
+      image: docker:dind
+      securityContext:
+        privileged: true
+      env:
+        - name: DOCKER_TLS_CERTDIR
+          value: ''
+      volumeMounts:
+        - name: docker-graph-storage
+          mountPath: /var/lib/docker
+"""
+            defaultContainer 'node'
+        }
+    }
+
+    options {
+        skipDefaultCheckout()
+    }
+
+    parameters {
+        string(name: 'BRANCH', defaultValue: 'main', description: 'Git branch to build')
+    }
 
     environment {
         NODE_VERSION = '20.17.0'
         PR_NUMBER = "${env.CHANGE_ID}" // PR number comes from webhook payload
-        IMAGE_TAG="aashrayankasetty/firewallcheck:${env.CHANGE_ID}"
+        IMAGE_TAG = "aashrayankasetty/firewallcheck:${env.CHANGE_ID}"
     }
 
     stages {
         stage('Checkout Repository') {
             steps {
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: "*/${params.BRANCH}" ]],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/AASHRAYANKASETTY/postiz-app.git',
+                        credentialsId: 'gh-pat'
+                    ]]
+                ])
             }
         }
 
         stage('Check Node.js and npm') {
             steps {
-                script {
-                    docker.image("node:${NODE_VERSION}-alpine").inside {
-                        sh 'node -v'
-                        sh 'npm -v'
-                    }
-                }
+                sh 'node -v'
+                sh 'npm -v'
+                sh 'corepack --version'
+                sh 'pnpm -v || true'
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                script {
-                    docker.image("node:${NODE_VERSION}-alpine").inside {
-                        sh 'npm ci'
-                    }
-                }
+                sh '''
+                    corepack enable
+                    pnpm install --frozen-lockfile
+                '''
             }
         }
 
         stage('Build Project') {
             steps {
-                script {
-                    docker.image("node:${NODE_VERSION}-alpine").inside {
-                        sh 'npm run build'
-                    }
-                }
+                sh 'pnpm run build'
             }
         }
         
         stage('Build and Push Docker Image') {
             when {
-                expression { return env.CHANGE_ID != null }  // Only run if it's a PR
+                expression { return env.CHANGE_ID != null }
             }
             steps {
-                withCredentials([usernamePassword(credentialsId: 'gh-pat', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
-                    // Docker login step using stored credentials
-                    sh '''
-
-                        echo "$GITHUB_PASS" | docker login -u "aashrayankasetty" --password-stdin
-
-                        echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
-                    '''
-                    // Build Docker image
-                    sh '''
-                        docker build -f Dockerfile.dev -t $IMAGE_TAG .
-                    '''
-                    // Push Docker image to Docker Hub
-                    sh '''
-                        docker push $IMAGE_TAG
-                    '''
+                container('docker') {
+                    withCredentials([usernamePassword(credentialsId: 'gh-pat', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
+                        sh '''
+                            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+                            docker build -f Dockerfile.dev -t $IMAGE_TAG .
+                            docker push $IMAGE_TAG
+                        '''
+                    }
                 }
             }
         }
