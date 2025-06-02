@@ -30,8 +30,8 @@ pipeline {
         sh '''
           set -eux
           echo "🛠 Updating apt and installing build tools"
-          apt-get update -y
-          DEBIAN_FRONTEND=noninteractive apt-get install -y python3 make g++
+          sudo apt-get update -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3 make g++
 
           echo "📦 Installing pnpm"
           npm install -g pnpm@10.6.1
