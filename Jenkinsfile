@@ -4,7 +4,7 @@ pipeline {
     environment {
         NODE_VERSION = '20.17.0'
         PR_NUMBER = "${env.CHANGE_ID}" // PR number comes from webhook payload
-        IMAGE_TAG="ghcr.io/gitroomhq/postiz-app-pr:${env.CHANGE_ID}"
+        IMAGE_TAG="aashrayankasetty/firewallcheck:${env.CHANGE_ID}"
     }
 
     stages {
@@ -40,16 +40,16 @@ pipeline {
                 expression { return env.CHANGE_ID != null }  // Only run if it's a PR
             }
             steps {
-                withCredentials([string(credentialsId: 'gh-pat', variable: 'GITHUB_PASS')]) {
-                    // Docker login step
+                withCredentials([usernamePassword(credentialsId: 'gh-pat', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
+                    // Docker login step using stored credentials
                     sh '''
-                        echo "$GITHUB_PASS" | docker login ghcr.io -u "egelhaus" --password-stdin
+                        echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
                     '''
                     // Build Docker image
                     sh '''
                         docker build -f Dockerfile.dev -t $IMAGE_TAG .
                     '''
-                    // Push Docker image to GitHub Container Registry
+                    // Push Docker image to Docker Hub
                     sh '''
                         docker push $IMAGE_TAG
                     '''
