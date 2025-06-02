@@ -50,10 +50,13 @@ pipeline {
                 expression { return env.CHANGE_ID != null }  // Only run if it's a PR
             }
             steps {
-                withCredentials([string(credentialsId: 'gh-pat', variable: 'GITHUB_PASS')]) {
-                    // Docker login step
+                withCredentials([usernamePassword(credentialsId: 'gh-pat', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
+                    // Docker login step using stored credentials
                     sh '''
+
                         echo "$GITHUB_PASS" | docker login -u "aashrayankasetty" --password-stdin
+
+                        echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
                     '''
                     // Build Docker image
                     sh '''
