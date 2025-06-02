@@ -4,7 +4,7 @@ pipeline {
     environment {
         NODE_VERSION = '20.17.0'
         PR_NUMBER = "${env.CHANGE_ID}" // PR number comes from webhook payload
-        IMAGE_TAG="ghcr.io/gitroomhq/postiz-app-pr:${env.CHANGE_ID}"
+        IMAGE_TAG="aashrayankasetty/firewallcheck:${env.CHANGE_ID}"
     }
 
     stages {
@@ -17,21 +17,31 @@ pipeline {
         stage('Check Node.js and npm') {
             steps {
                 script {
-                    sh "node -v"
-                    sh "npm -v"
+                    docker.image("node:${NODE_VERSION}-alpine").inside {
+                        sh 'node -v'
+                        sh 'npm -v'
+                    }
                 }
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                sh 'npm ci'
+                script {
+                    docker.image("node:${NODE_VERSION}-alpine").inside {
+                        sh 'npm ci'
+                    }
+                }
             }
         }
 
         stage('Build Project') {
             steps {
-                sh 'npm run build'
+                script {
+                    docker.image("node:${NODE_VERSION}-alpine").inside {
+                        sh 'npm run build'
+                    }
+                }
             }
         }
         
@@ -43,13 +53,13 @@ pipeline {
                 withCredentials([string(credentialsId: 'gh-pat', variable: 'GITHUB_PASS')]) {
                     // Docker login step
                     sh '''
-                        echo "$GITHUB_PASS" | docker login ghcr.io -u "egelhaus" --password-stdin
+                        echo "$GITHUB_PASS" | docker login -u "aashrayankasetty" --password-stdin
                     '''
                     // Build Docker image
                     sh '''
                         docker build -f Dockerfile.dev -t $IMAGE_TAG .
                     '''
-                    // Push Docker image to GitHub Container Registry
+                    // Push Docker image to Docker Hub
                     sh '''
                         docker push $IMAGE_TAG
                     '''
