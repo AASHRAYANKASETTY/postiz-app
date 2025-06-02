@@ -17,21 +17,31 @@ pipeline {
         stage('Check Node.js and npm') {
             steps {
                 script {
-                    sh "node -v"
-                    sh "npm -v"
+                    docker.image("node:${NODE_VERSION}-alpine").inside {
+                        sh 'node -v'
+                        sh 'npm -v'
+                    }
                 }
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                sh 'npm ci'
+                script {
+                    docker.image("node:${NODE_VERSION}-alpine").inside {
+                        sh 'npm ci'
+                    }
+                }
             }
         }
 
         stage('Build Project') {
             steps {
-                sh 'npm run build'
+                script {
+                    docker.image("node:${NODE_VERSION}-alpine").inside {
+                        sh 'npm run build'
+                    }
+                }
             }
         }
         
@@ -43,6 +53,9 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'gh-pat', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
                     // Docker login step using stored credentials
                     sh '''
+
+                        echo "$GITHUB_PASS" | docker login -u "aashrayankasetty" --password-stdin
+
                         echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
                     '''
                     // Build Docker image
