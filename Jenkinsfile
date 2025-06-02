@@ -8,11 +8,23 @@ spec:
   volumes:
     - name: docker-graph-storage
       emptyDir: {}
+    - name: workspace-volume
+      emptyDir: {}
   containers:
     - name: node
       image: node:20.17.0
       command: ['cat']
       tty: true
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "1000m"
+        limits:
+          memory: "4Gi"
+          cpu: "2000m"
+      volumeMounts:
+        - mountPath: "/home/jenkins/agent"
+          name: workspace-volume
     - name: docker
       image: docker:dind
       securityContext:
@@ -20,9 +32,18 @@ spec:
       env:
         - name: DOCKER_TLS_CERTDIR
           value: ''
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "500m"
+        limits:
+          memory: "1Gi"
+          cpu: "1000m"
       volumeMounts:
-        - name: docker-graph-storage
-          mountPath: /var/lib/docker
+        - mountPath: /var/lib/docker
+          name: docker-graph-storage
+        - mountPath: "/home/jenkins/agent"
+          name: workspace-volume
 """
             defaultContainer 'node'
         }
@@ -78,7 +99,7 @@ spec:
                 sh 'pnpm run build'
             }
         }
-        
+
         stage('Build and Push Docker Image') {
             when {
                 expression { return env.CHANGE_ID != null }
@@ -99,10 +120,10 @@ spec:
 
     post {
         success {
-            echo 'Build completed successfully!'
+            echo '✅ Build completed successfully!'
         }
         failure {
-            echo 'Build failed!'
+            echo '❌ Build failed!'
         }
     }
 }
