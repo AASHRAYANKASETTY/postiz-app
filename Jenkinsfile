@@ -28,16 +28,31 @@ spec:
         }
     }
 
+    options {
+        skipDefaultCheckout()
+    }
+
+    parameters {
+        string(name: 'BRANCH', defaultValue: 'main', description: 'Git branch to build')
+    }
+
     environment {
         NODE_VERSION = '20.17.0'
-        PR_NUMBER = "${env.CHANGE_ID}" // PR number comes from webhook payload
+        PR_NUMBER = "${env.CHANGE_ID}"
         IMAGE_TAG = "aashrayankasetty/firewallcheck:${env.CHANGE_ID}"
     }
 
     stages {
         stage('Checkout Repository') {
             steps {
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: "*/${params.BRANCH}" ]],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/AASHRAYANKASETTY/postiz-app.git',
+                        credentialsId: 'gh-pat'
+                    ]]
+                ])
             }
         }
 
@@ -45,18 +60,23 @@ spec:
             steps {
                 sh 'node -v'
                 sh 'npm -v'
+                sh 'corepack --version'
+                sh 'pnpm -v || true'
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                sh 'npm ci'
+                sh '''
+                    corepack enable
+                    pnpm install --frozen-lockfile
+                '''
             }
         }
 
         stage('Build Project') {
             steps {
-                sh 'npm run build'
+                sh 'pnpm run build'
             }
         }
         
@@ -77,14 +97,13 @@ spec:
             }
         }
     }
+
     post {
         success {
             echo 'Build completed successfully!'
-
         }
         failure {
             echo 'Build failed!'
-
         }
     }
 }
