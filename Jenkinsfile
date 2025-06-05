@@ -15,13 +15,6 @@ spec:
       image: node:20.17.0
       command: ['cat']
       tty: true
-      resources:
-        requests:
-          memory: "2Gi"
-          cpu: "1000m"
-        limits:
-          memory: "4Gi"
-          cpu: "2000m"
       volumeMounts:
         - mountPath: "/home/jenkins/agent"
           name: workspace-volume
@@ -32,13 +25,6 @@ spec:
       env:
         - name: DOCKER_TLS_CERTDIR
           value: ''
-      resources:
-        requests:
-          memory: "512Mi"
-          cpu: "500m"
-        limits:
-          memory: "1Gi"
-          cpu: "1000m"
       volumeMounts:
         - mountPath: /var/lib/docker
           name: docker-graph-storage
