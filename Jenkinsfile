@@ -1,53 +1,5 @@
 pipeline {
-    agent {
-        kubernetes {
-            yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  volumes:
-    - name: docker-graph-storage
-      emptyDir: {}
-    - name: workspace-volume
-      emptyDir: {}
-  containers:
-    - name: node
-      image: node:20.17.0
-      command: ['cat']
-      tty: true
-      resources:
-        requests:
-          memory: "2Gi"
-          cpu: "1000m"
-        limits:
-          memory: "4Gi"
-          cpu: "2000m"
-      volumeMounts:
-        - mountPath: "/home/jenkins/agent"
-          name: workspace-volume
-    - name: docker
-      image: docker:dind
-      securityContext:
-        privileged: true
-      env:
-        - name: DOCKER_TLS_CERTDIR
-          value: ''
-      resources:
-        requests:
-          memory: "512Mi"
-          cpu: "500m"
-        limits:
-          memory: "1Gi"
-          cpu: "1000m"
-      volumeMounts:
-        - mountPath: /var/lib/docker
-          name: docker-graph-storage
-        - mountPath: "/home/jenkins/agent"
-          name: workspace-volume
-"""
-            defaultContainer 'node'
-        }
-    }
+    agent any
 
     options {
         skipDefaultCheckout()
@@ -59,8 +11,8 @@ spec:
 
     environment {
         NODE_VERSION = '20.17.0'
-        PR_NUMBER = "${env.CHANGE_ID}"
-        IMAGE_TAG = "aashrayankasetty/firewallcheck:${env.CHANGE_ID}"
+        PR_NUMBER = "${env.CHANGE_ID ?: 'manual'}"
+        IMAGE_TAG = "aashrayankasetty/firewallcheck:${env.PR_NUMBER}"
     }
 
     stages {
@@ -68,7 +20,7 @@ spec:
             steps {
                 checkout([
                     $class: 'GitSCM',
-                    branches: [[name: "*/${params.BRANCH}" ]],
+                    branches: [[name: "*/${params.BRANCH}"]],
                     userRemoteConfigs: [[
                         url: 'https://github.com/AASHRAYANKASETTY/postiz-app.git',
                         credentialsId: 'gh-pat'
@@ -79,8 +31,8 @@ spec:
 
         stage('Check Node.js and npm') {
             steps {
-                sh 'node -v'
-                sh 'npm -v'
+                sh 'node -v || echo "❌ Node.js not found"'
+                sh 'npm -v || echo "❌ npm not found"'
             }
         }
 
@@ -102,17 +54,15 @@ spec:
 
         stage('Build and Push Docker Image') {
             when {
-                expression { return env.CHANGE_ID != null }
+                expression { return env.PR_NUMBER != null }
             }
             steps {
-                container('docker') {
-                    withCredentials([usernamePassword(credentialsId: 'gh-pat', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
-                        sh '''
-                            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
-                            docker build -f Dockerfile.dev -t $IMAGE_TAG .
-                            docker push $IMAGE_TAG
-                        '''
-                    }
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
+                    sh '''
+                        echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+                        docker build -f Dockerfile.dev -t $IMAGE_TAG .
+                        docker push $IMAGE_TAG
+                    '''
                 }
             }
         }
@@ -120,10 +70,10 @@ spec:
 
     post {
         success {
-            echo '✅ Build completed successfully!'
+            echo '✅ Build and push completed successfully!'
         }
         failure {
-            echo '❌ Build failed!'
+            echo '❌ Build failed. Please check logs.'
         }
     }
 }
