@@ -1,5 +1,20 @@
 pipeline {
-    agent any
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - name: node
+      image: node:20.17.0
+      command:
+        - cat
+      tty: true
+"""
+            defaultContainer 'node'
+        }
+    }
 
     parameters {
         string(name: 'BRANCH', defaultValue: 'main', description: 'Git branch to build')
@@ -24,30 +39,24 @@ pipeline {
             }
         }
 
-        stage('Build Inside Node Container') {
+        stage('Install Dependencies') {
             steps {
-                script {
-                    docker.image('node:20.17.0').inside {
-                        sh 'node -v'
-                        sh 'npm -v'
-                        sh 'npm install -g pnpm'
-                        sh 'pnpm install --frozen-lockfile'
-                        sh 'pnpm run build'
-                    }
-                }
+                sh '''
+                    npm install -g pnpm
+                    pnpm install --frozen-lockfile
+                '''
+            }
+        }
+
+        stage('Build Project') {
+            steps {
+                sh 'pnpm run build'
             }
         }
 
         stage('Build and Push Docker Image') {
             steps {
-                script {
-                    // Now we need a docker-capable agent (you may need to run this on an agent with Docker)
-                    // OR: skip this if you are NOT using docker in Jenkins
-                    sh '''
-                        echo "⚠️ Docker CLI not available in Bitnami controller by default."
-                        echo "You must run this stage on an agent with Docker, or set up a Kubernetes PodTemplate with docker:dind."
-                    '''
-                }
+                echo "⚠️ Docker is not available in this container. To enable this step, use a pod with Docker (e.g., docker:dind). Skipping."
             }
         }
     }
