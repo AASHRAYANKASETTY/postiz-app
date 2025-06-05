@@ -1,8 +1,9 @@
 pipeline {
-    agent any
-
-    options {
-        skipDefaultCheckout()
+    agent {
+        docker {
+            image 'node:20.17.0'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
     }
 
     parameters {
@@ -29,17 +30,9 @@ pipeline {
             }
         }
 
-        stage('Check Node.js and npm') {
-            steps {
-                sh 'node -v || echo "❌ Node.js not found"'
-                sh 'npm -v || echo "❌ npm not found"'
-            }
-        }
-
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    set -e
                     npm install -g pnpm
                     pnpm install --frozen-lockfile
                 '''
