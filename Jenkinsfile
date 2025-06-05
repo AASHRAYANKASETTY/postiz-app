@@ -1,17 +1,11 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:20.17.0'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any
 
     parameters {
         string(name: 'BRANCH', defaultValue: 'main', description: 'Git branch to build')
     }
 
     environment {
-        NODE_VERSION = '20.17.0'
         PR_NUMBER = "${env.CHANGE_ID ?: 'manual'}"
         IMAGE_TAG = "aashrayankasetty/firewallcheck:${env.PR_NUMBER}"
     }
@@ -30,31 +24,28 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Build Inside Node Container') {
             steps {
-                sh '''
-                    npm install -g pnpm
-                    pnpm install --frozen-lockfile
-                '''
-            }
-        }
-
-        stage('Build Project') {
-            steps {
-                sh 'pnpm run build'
+                script {
+                    docker.image('node:20.17.0').inside {
+                        sh 'node -v'
+                        sh 'npm -v'
+                        sh 'npm install -g pnpm'
+                        sh 'pnpm install --frozen-lockfile'
+                        sh 'pnpm run build'
+                    }
+                }
             }
         }
 
         stage('Build and Push Docker Image') {
-            when {
-                expression { return env.PR_NUMBER != null }
-            }
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
+                script {
+                    // Now we need a docker-capable agent (you may need to run this on an agent with Docker)
+                    // OR: skip this if you are NOT using docker in Jenkins
                     sh '''
-                        echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
-                        docker build -f Dockerfile.dev -t $IMAGE_TAG .
-                        docker push $IMAGE_TAG
+                        echo "⚠️ Docker CLI not available in Bitnami controller by default."
+                        echo "You must run this stage on an agent with Docker, or set up a Kubernetes PodTemplate with docker:dind."
                     '''
                 }
             }
@@ -63,7 +54,7 @@ pipeline {
 
     post {
         success {
-            echo '✅ Build and push completed successfully!'
+            echo '✅ Build completed successfully!'
         }
         failure {
             echo '❌ Build failed. Please check logs.'
