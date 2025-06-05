@@ -15,13 +15,16 @@ spec:
       image: node:20.17.0
       command: ['cat']
       tty: true
+      env:
+        - name: NODE_OPTIONS
+          value: "--max-old-space-size=4096"
       resources:
         requests:
-          memory: "1Gi"
-          cpu: "1"
-        limits:
           memory: "2Gi"
-          cpu: "2"
+          cpu: "1000m"
+        limits:
+          memory: "4Gi"
+          cpu: "2000m"
       volumeMounts:
         - mountPath: "/home/jenkins/agent"
           name: workspace-volume
@@ -51,6 +54,7 @@ spec:
 
     options {
         skipDefaultCheckout()
+        timeout(time: 30, unit: 'MINUTES')
     }
 
     parameters {
@@ -59,16 +63,16 @@ spec:
 
     environment {
         NODE_VERSION = '20.17.0'
-        PR_NUMBER = "${env.CHANGE_ID}"
-        IMAGE_TAG = "aashrayankasetty/firewallcheck:${env.CHANGE_ID}"
+        IMAGE_TAG = "aashrayankasetty/firewallcheck:${env.BUILD_NUMBER}"
     }
 
     stages {
+
         stage('Checkout Repository') {
             steps {
                 checkout([
                     $class: 'GitSCM',
-                    branches: [[name: "*/${params.BRANCH}"]],
+                    branches: [[name: "*/${params.BRANCH}" ]],
                     userRemoteConfigs: [[
                         url: 'https://github.com/AASHRAYANKASETTY/postiz-app.git',
                         credentialsId: 'gh-pat'
@@ -77,17 +81,9 @@ spec:
             }
         }
 
-        stage('Check Node.js and npm') {
-            steps {
-                sh 'node -v'
-                sh 'npm -v'
-            }
-        }
-
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    set -e
                     npm install -g pnpm
                     pnpm install --frozen-lockfile
                 '''
@@ -95,15 +91,35 @@ spec:
         }
 
         stage('Build Project') {
-            steps {
-                sh 'pnpm run build'
+            parallel {
+                stage('Build Frontend') {
+                    steps {
+                        sh '''
+                            export NODE_OPTIONS="--max-old-space-size=4096"
+                            pnpm --filter ./apps/frontend run build
+                        '''
+                    }
+                }
+                stage('Build Backend') {
+                    steps {
+                        sh '''
+                            export NODE_OPTIONS="--max-old-space-size=4096"
+                            pnpm --filter ./apps/backend run build
+                        '''
+                    }
+                }
+                stage('Build Workers') {
+                    steps {
+                        sh '''
+                            export NODE_OPTIONS="--max-old-space-size=4096"
+                            pnpm --filter ./apps/workers run build
+                        '''
+                    }
+                }
             }
         }
 
         stage('Build and Push Docker Image') {
-            when {
-                expression { return env.CHANGE_ID != null }
-            }
             steps {
                 container('docker') {
                     withCredentials([usernamePassword(credentialsId: 'gh-pat', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
@@ -124,6 +140,9 @@ spec:
         }
         failure {
             echo '❌ Build failed!'
+        }
+        always {
+            echo "Build Finished for Branch: ${params.BRANCH}"
         }
     }
 }
