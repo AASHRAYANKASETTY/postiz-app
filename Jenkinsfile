@@ -1,72 +1,70 @@
 pipeline {
-    agent {
-        kubernetes {
-            yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-    - name: node
-      image: node:20.17.0
-      command:
-        - cat
-      tty: true
-"""
-            defaultContainer 'node'
-        }
-    }
-
-    parameters {
-        string(name: 'BRANCH', defaultValue: 'main', description: 'Git branch to build')
-    }
+    agent any
 
     environment {
-        PR_NUMBER = "${env.CHANGE_ID ?: 'manual'}"
-        IMAGE_TAG = "aashrayankasetty/firewallcheck:${env.PR_NUMBER}"
+        NODE_VERSION = '20.17.0'
+        PR_NUMBER = "${env.CHANGE_ID}" // PR number comes from webhook payload
+        IMAGE_TAG="ghcr.io/gitroomhq/postiz-app-pr:${env.CHANGE_ID}"
     }
 
     stages {
         stage('Checkout Repository') {
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: "*/${params.BRANCH}"]],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/AASHRAYANKASETTY/postiz-app.git',
-                        credentialsId: 'gh-pat'
-                    ]]
-                ])
+                checkout scm
+            }
+        }
+
+        stage('Check Node.js and npm') {
+            steps {
+                script {
+                    sh "node -v"
+                    sh "npm -v"
+                }
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                sh '''
-                    npm install -g pnpm
-                    pnpm install --frozen-lockfile
-                '''
+                sh 'npm ci'
             }
         }
 
         stage('Build Project') {
             steps {
-                sh 'pnpm run build'
+                sh 'npm run build'
             }
         }
-
+        
         stage('Build and Push Docker Image') {
+            when {
+                expression { return env.CHANGE_ID != null }  // Only run if it's a PR
+            }
             steps {
-                echo "⚠️ Docker is not available in this container. To enable this step, use a pod with Docker (e.g., docker:dind). Skipping."
+                withCredentials([string(credentialsId: 'gh-pat', variable: 'GITHUB_PASS')]) {
+                    // Docker login step
+                    sh '''
+                        echo "$GITHUB_PASS" | docker login ghcr.io -u "egelhaus" --password-stdin
+                    '''
+                    // Build Docker image
+                    sh '''
+                        docker build -f Dockerfile.dev -t $IMAGE_TAG .
+                    '''
+                    // Push Docker image to GitHub Container Registry
+                    sh '''
+                        docker push $IMAGE_TAG
+                    '''
+                }
             }
         }
     }
-
     post {
         success {
-            echo '✅ Build completed successfully!'
+            echo 'Build completed successfully!'
+
         }
         failure {
-            echo '❌ Build failed. Please check logs.'
+            echo 'Build failed!'
+
         }
     }
 }
