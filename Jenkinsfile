@@ -12,7 +12,7 @@ spec:
       emptyDir: {}
   containers:
     - name: node
-      image: node:20.17.0
+      image: xtremeverveacr.azurecr.io/node-pnpm:20.17.0
       command: ['cat']
       tty: true
       env:
@@ -49,7 +49,9 @@ spec:
 
     environment {
         NODE_VERSION = '20.17.0'
-        IMAGE_TAG = "aashrayankasetty/firewallcheck:${env.BUILD_NUMBER}"
+        IMAGE_NAME = 'postiz-app'
+        ACR_REGISTRY = 'xtremeverveacr.azurecr.io'
+        IMAGE_TAG = "${ACR_REGISTRY}/${IMAGE_NAME}:${env.BUILD_NUMBER}"
     }
 
     stages {
@@ -70,7 +72,6 @@ spec:
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    npm install -g pnpm
                     pnpm install --frozen-lockfile
                 '''
             }
@@ -81,7 +82,6 @@ spec:
                 stage('Build Frontend') {
                     steps {
                         sh '''
-                            export NODE_OPTIONS="--max-old-space-size=4096"
                             pnpm --filter ./apps/frontend run build
                         '''
                     }
@@ -89,7 +89,6 @@ spec:
                 stage('Build Backend') {
                     steps {
                         sh '''
-                            export NODE_OPTIONS="--max-old-space-size=4096"
                             pnpm --filter ./apps/backend run build
                         '''
                     }
@@ -97,7 +96,6 @@ spec:
                 stage('Build Workers') {
                     steps {
                         sh '''
-                            export NODE_OPTIONS="--max-old-space-size=4096"
                             pnpm --filter ./apps/workers run build
                         '''
                     }
@@ -108,9 +106,9 @@ spec:
         stage('Build and Push Docker Image') {
             steps {
                 container('docker') {
-                    withCredentials([usernamePassword(credentialsId: 'gh-pat', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
+                    withCredentials([usernamePassword(credentialsId: 'acr-creds', usernameVariable: 'ACR_USER', passwordVariable: 'ACR_PASS')]) {
                         sh '''
-                            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+                            echo "$ACR_PASS" | docker login $ACR_REGISTRY -u "$ACR_USER" --password-stdin
                             docker build -f Dockerfile.dev -t $IMAGE_TAG .
                             docker push $IMAGE_TAG
                         '''
