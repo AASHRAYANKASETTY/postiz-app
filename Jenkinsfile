@@ -61,8 +61,8 @@ spec:
 
     environment {
         NODE_VERSION = '20.17.0'
-        PR_NUMBER = "${env.CHANGE_ID}"
-        IMAGE_TAG = "xtremeverveacr.azurecr.io/postiz:${env.CHANGE_ID ?: env.BRANCH_NAME}-${env.BUILD_NUMBER}"
+        BUILD_REF = "${env.CHANGE_ID ?: env.BRANCH_NAME}-${env.BUILD_NUMBER}"
+        IMAGE_TAG = "xtremeverveacr.azurecr.io/postiz:${BUILD_REF}"
     }
 
     stages {
