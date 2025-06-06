@@ -13,7 +13,7 @@ spec:
   containers:
     - name: node
       image: xtremeverveacr.azurecr.io/node-pnpm:20.17.0
-      command: ['cat']
+      command: ['sh', '-c', 'cat']
       tty: true
       env:
         - name: NODE_OPTIONS
