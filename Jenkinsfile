@@ -29,13 +29,6 @@ spec:
       image: node:20.17.0
       command: ['cat']
       tty: true
-      resources:
-        requests:
-          memory: "2Gi"
-          cpu: "1000m"
-        limits:
-          memory: "4Gi"
-          cpu: "2000m"
       volumeMounts:
         - mountPath: "/home/jenkins/agent"
           name: workspace-volume
@@ -46,13 +39,6 @@ spec:
       env:
         - name: DOCKER_TLS_CERTDIR
           value: ''
-      resources:
-        requests:
-          memory: "512Mi"
-          cpu: "500m"
-        limits:
-          memory: "1Gi"
-          cpu: "1000m"
       volumeMounts:
         - mountPath: /var/lib/docker
           name: docker-graph-storage
@@ -112,7 +98,13 @@ spec:
 
         stage('Build Project') {
             steps {
-                sh 'pnpm run build'
+                sh '''
+                    NODE_OPTIONS="--max-old-space-size=4096" pnpm -r --workspace-concurrency=1 \
+                    --filter ./apps/frontend \
+                    --filter ./apps/backend \
+                    --filter ./apps/workers \
+                    --filter ./apps/cron run build
+                '''
             }
         }
 
@@ -136,11 +128,9 @@ spec:
 
     post {
         success {
-            echo 'Build completed successfully!'
             echo '✅ Build completed successfully!'
         }
         failure {
-            echo 'Build failed!'
             echo '❌ Build failed!'
         }
     }
