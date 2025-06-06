@@ -109,9 +109,6 @@ spec:
         }
 
         stage('Build and Push Docker Image') {
-            when {
-                expression { return env.CHANGE_ID != null }
-            }
             steps {
                 container('docker') {
                     withCredentials([usernamePassword(credentialsId: 'acr-creds', usernameVariable: 'ACR_USER', passwordVariable: 'ACR_PASS')]) {
