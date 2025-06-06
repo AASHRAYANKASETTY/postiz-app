@@ -62,7 +62,7 @@ spec:
     environment {
         NODE_VERSION = '20.17.0'
         PR_NUMBER = "${env.CHANGE_ID}"
-        IMAGE_TAG = "xtremeverveacr.azurecr.io/firewallcheck:${env.CHANGE_ID}"
+        IMAGE_TAG = "xtremeverveacr.azurecr.io/postiz:${env.CHANGE_ID}"
     }
 
     stages {
