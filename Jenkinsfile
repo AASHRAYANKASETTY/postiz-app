@@ -12,12 +12,16 @@ spec:
       emptyDir: {}
   containers:
     - name: node
-      image: xtremeverveacr.azurecr.io/node-pnpm:20.17.0
-      command: ['sh', '-c', 'cat']
+      image: node:20.17.0
+      command: ['cat']
       tty: true
-      env:
-        - name: NODE_OPTIONS
-          value: "--max-old-space-size=4096"
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "1000m"
+        limits:
+          memory: "4Gi"
+          cpu: "2000m"
       volumeMounts:
         - mountPath: "/home/jenkins/agent"
           name: workspace-volume
@@ -28,11 +32,20 @@ spec:
       env:
         - name: DOCKER_TLS_CERTDIR
           value: ''
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "500m"
+        limits:
+          memory: "1Gi"
+          cpu: "1000m"
       volumeMounts:
         - mountPath: /var/lib/docker
           name: docker-graph-storage
         - mountPath: "/home/jenkins/agent"
           name: workspace-volume
+  imagePullSecrets:
+    - name: acr-secret
 """
             defaultContainer 'node'
         }
@@ -40,7 +53,6 @@ spec:
 
     options {
         skipDefaultCheckout()
-        timeout(time: 30, unit: 'MINUTES')
     }
 
     parameters {
@@ -49,13 +61,11 @@ spec:
 
     environment {
         NODE_VERSION = '20.17.0'
-        IMAGE_NAME = 'postiz-app'
-        ACR_REGISTRY = 'xtremeverveacr.azurecr.io'
-        IMAGE_TAG = "${ACR_REGISTRY}/${IMAGE_NAME}:${env.BUILD_NUMBER}"
+        PR_NUMBER = "${env.CHANGE_ID}"
+        IMAGE_TAG = "xtremeverveacr.azurecr.io/firewallcheck:${env.CHANGE_ID}"
     }
 
     stages {
-
         stage('Checkout Repository') {
             steps {
                 checkout([
@@ -69,46 +79,38 @@ spec:
             }
         }
 
+        stage('Check Node.js and npm') {
+            steps {
+                sh 'node -v'
+                sh 'npm -v'
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
                 sh '''
+                    set -e
+                    npm install -g pnpm
                     pnpm install --frozen-lockfile
                 '''
             }
         }
 
         stage('Build Project') {
-            parallel {
-                stage('Build Frontend') {
-                    steps {
-                        sh '''
-                            pnpm --filter ./apps/frontend run build
-                        '''
-                    }
-                }
-                stage('Build Backend') {
-                    steps {
-                        sh '''
-                            pnpm --filter ./apps/backend run build
-                        '''
-                    }
-                }
-                stage('Build Workers') {
-                    steps {
-                        sh '''
-                            pnpm --filter ./apps/workers run build
-                        '''
-                    }
-                }
+            steps {
+                sh 'pnpm run build'
             }
         }
 
         stage('Build and Push Docker Image') {
+            when {
+                expression { return env.CHANGE_ID != null }
+            }
             steps {
                 container('docker') {
                     withCredentials([usernamePassword(credentialsId: 'acr-creds', usernameVariable: 'ACR_USER', passwordVariable: 'ACR_PASS')]) {
                         sh '''
-                            echo "$ACR_PASS" | docker login $ACR_REGISTRY -u "$ACR_USER" --password-stdin
+                            echo "$ACR_PASS" | docker login xtremeverveacr.azurecr.io -u "$ACR_USER" --password-stdin
                             docker build -f Dockerfile.dev -t $IMAGE_TAG .
                             docker push $IMAGE_TAG
                         '''
@@ -120,13 +122,12 @@ spec:
 
     post {
         success {
+            echo 'Build completed successfully!'
             echo '✅ Build completed successfully!'
         }
         failure {
+            echo 'Build failed!'
             echo '❌ Build failed!'
-        }
-        always {
-            echo "Build Finished for Branch: ${params.BRANCH}"
         }
     }
 }
