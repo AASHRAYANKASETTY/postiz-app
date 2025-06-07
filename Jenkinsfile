@@ -71,8 +71,8 @@ spec:
     environment {
         NODE_VERSION = '20.17.0'
         BUILD_TIMESTAMP = sh(script: 'date +%Y%m%d-%H%M', returnStdout: true).trim()
-        BUILD_REF = "${env.BRANCH_NAME ?: 'manual'}-${env.BUILD_ID}-${BUILD_TIMESTAMP}"
         CLEAN_BRANCH = "${params.BRANCH}".replaceFirst('^origin/', '')
+        BUILD_REF = "${CLEAN_BRANCH}-${env.BUILD_ID}-${BUILD_TIMESTAMP}"
         IMAGE_TAG = "xtremeverveacr.azurecr.io/postiz:${BUILD_REF}"
     }
 
