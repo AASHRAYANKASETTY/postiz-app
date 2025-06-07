@@ -1,4 +1,4 @@
-pipeline {More actions
+pipeline {
     agent {
         kubernetes {
             yaml """
