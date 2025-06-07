@@ -29,6 +29,13 @@ spec:
       image: node:20.17.0
       command: ['cat']
       tty: true
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "1000m"
+        limits:
+          memory: "4Gi"
+          cpu: "2000m"
       volumeMounts:
         - mountPath: "/home/jenkins/agent"
           name: workspace-volume
@@ -39,6 +46,13 @@ spec:
       env:
         - name: DOCKER_TLS_CERTDIR
           value: ''
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "500m"
+        limits:
+          memory: "1Gi"
+          cpu: "1000m"
       volumeMounts:
         - mountPath: /var/lib/docker
           name: docker-graph-storage
@@ -56,24 +70,13 @@ spec:
     }
 
     parameters {
-        gitParameter(
-          name: 'BRANCH',
-          type: 'PT_BRANCH',
-          defaultValue: 'main',
-          description: 'Git branch to build',
-          branchFilter: '.*',
-          selectedValue: 'DEFAULT',
-          sortMode: 'ASCENDING',
-          useRepository: 'https://github.com/your-org/your-repo.git'
-        )
+        string(name: 'BRANCH', defaultValue: 'main', description: 'Git branch to build')
     }
 
     environment {
         NODE_VERSION = '20.17.0'
-        BUILD_TIMESTAMP = sh(script: 'date +%Y%m%d-%H%M', returnStdout: true).trim()
-        CLEAN_BRANCH = "${params.BRANCH}".replaceFirst('^origin/', '')
-        BUILD_REF = "${CLEAN_BRANCH}-${env.BUILD_ID}-${BUILD_TIMESTAMP}"
-        IMAGE_TAG = "xtremeverveacr.azurecr.io/postiz:${BUILD_REF}"
+        PR_NUMBER = "${env.CHANGE_ID}"
+        IMAGE_TAG = "xtremeverveacr.azurecr.io/postiz:${env.CHANGE_ID}"
     }
 
     stages {
@@ -109,17 +112,14 @@ spec:
 
         stage('Build Project') {
             steps {
-                sh '''
-                    NODE_OPTIONS="--max-old-space-size=4096" pnpm -r --workspace-concurrency=1 \
-                    --filter ./apps/frontend \
-                    --filter ./apps/backend \
-                    --filter ./apps/workers \
-                    --filter ./apps/cron run build
-                '''
+                sh 'pnpm run build'
             }
         }
 
         stage('Build and Push Docker Image') {
+            when {
+                expression { return env.CHANGE_ID != null }
+            }
             steps {
                 container('docker') {
                     withCredentials([usernamePassword(credentialsId: 'acr-creds', usernameVariable: 'ACR_USER', passwordVariable: 'ACR_PASS')]) {
@@ -136,9 +136,11 @@ spec:
 
     post {
         success {
+            echo 'Build completed successfully!'
             echo '✅ Build completed successfully!'
         }
         failure {
+            echo 'Build failed!'
             echo '❌ Build failed!'
         }
     }
