@@ -56,13 +56,23 @@ spec:
     }
 
     parameters {
-        string(name: 'BRANCH', defaultValue: 'main', description: 'Git branch to build')
+        gitParameter(
+          name: 'BRANCH',
+          type: 'PT_BRANCH',
+          defaultValue: 'main',
+          description: 'Git branch to build',
+          branchFilter: '.*',
+          selectedValue: 'DEFAULT',
+          sortMode: 'ASCENDING',
+          useRepository: 'https://github.com/your-org/your-repo.git'
+        )
     }
 
     environment {
         NODE_VERSION = '20.17.0'
         BUILD_TIMESTAMP = sh(script: 'date +%Y%m%d-%H%M', returnStdout: true).trim()
-        BUILD_REF = "${env.BRANCH_NAME ?: 'manual'}-${env.BUILD_ID}-${BUILD_TIMESTAMP}"
+        CLEAN_BRANCH = "${params.BRANCH}".replaceFirst('^origin/', '')
+        BUILD_REF = "${CLEAN_BRANCH}-${env.BUILD_ID}-${BUILD_TIMESTAMP}"
         IMAGE_TAG = "xtremeverveacr.azurecr.io/postiz:${BUILD_REF}"
     }
 
