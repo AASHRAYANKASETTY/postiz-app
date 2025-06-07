@@ -112,7 +112,13 @@ spec:
 
         stage('Build Project') {
             steps {
-                sh 'pnpm run build'
+                sh '''
+                    NODE_OPTIONS="--max-old-space-size=4096" pnpm -r --workspace-concurrency=1 \
+                    --filter ./apps/frontend \
+                    --filter ./apps/backend \
+                    --filter ./apps/workers \
+                    --filter ./apps/cron run build
+                '''
             }
         }
 
