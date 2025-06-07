@@ -1,4 +1,4 @@
-pipeline {
+pipeline {More actions
     agent {
         kubernetes {
             yaml """
@@ -29,13 +29,6 @@ spec:
       image: node:20.17.0
       command: ['cat']
       tty: true
-      resources:
-        requests:
-          memory: "2Gi"
-          cpu: "1000m"
-        limits:
-          memory: "4Gi"
-          cpu: "2000m"
       volumeMounts:
         - mountPath: "/home/jenkins/agent"
           name: workspace-volume
@@ -46,13 +39,6 @@ spec:
       env:
         - name: DOCKER_TLS_CERTDIR
           value: ''
-      resources:
-        requests:
-          memory: "512Mi"
-          cpu: "500m"
-        limits:
-          memory: "1Gi"
-          cpu: "1000m"
       volumeMounts:
         - mountPath: /var/lib/docker
           name: docker-graph-storage
@@ -70,13 +56,24 @@ spec:
     }
 
     parameters {
-        string(name: 'BRANCH', defaultValue: 'main', description: 'Git branch to build')
+        gitParameter(
+          name: 'BRANCH',
+          type: 'PT_BRANCH',
+          defaultValue: 'main',
+          description: 'Git branch to build',
+          branchFilter: '.*',
+          selectedValue: 'DEFAULT',
+          sortMode: 'ASCENDING',
+          useRepository: 'https://github.com/your-org/your-repo.git'
+        )
     }
 
     environment {
         NODE_VERSION = '20.17.0'
-        PR_NUMBER = "${env.CHANGE_ID}"
-        IMAGE_TAG = "xtremeverveacr.azurecr.io/postiz:${env.CHANGE_ID}"
+        BUILD_TIMESTAMP = sh(script: 'date +%Y%m%d-%H%M', returnStdout: true).trim()
+        BUILD_REF = "${env.BRANCH_NAME ?: 'manual'}-${env.BUILD_ID}-${BUILD_TIMESTAMP}"
+        CLEAN_BRANCH = "${params.BRANCH}".replaceFirst('^origin/', '')
+        IMAGE_TAG = "xtremeverveacr.azurecr.io/postiz:${BUILD_REF}"
     }
 
     stages {
@@ -139,11 +136,9 @@ spec:
 
     post {
         success {
-            echo 'Build completed successfully!'
             echo '✅ Build completed successfully!'
         }
         failure {
-            echo 'Build failed!'
             echo '❌ Build failed!'
         }
     }
