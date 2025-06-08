@@ -64,14 +64,14 @@ spec:
           branchFilter: '.*',
           selectedValue: 'DEFAULT',
           sortMode: 'ASCENDING',
-          useRepository: 'https://github.com/your-org/your-repo.git'
+          useRepository: 'https://github.com/AASHRAYANKASETTY/postiz-app.git'
         )
     }
 
     environment {
         NODE_VERSION = '20.17.0'
         BUILD_TIMESTAMP = sh(script: 'date +%Y%m%d-%H%M', returnStdout: true).trim()
-        CLEAN_BRANCH = "${params.BRANCH}".replaceFirst('^origin/', '')
+        CLEAN_BRANCH = "${params.BRANCH}".replaceAll('/', '-')
         BUILD_REF = "${CLEAN_BRANCH}-${env.BUILD_ID}-${BUILD_TIMESTAMP}"
         IMAGE_TAG = "xtremeverveacr.azurecr.io/postiz:${BUILD_REF}"
     }
@@ -81,7 +81,7 @@ spec:
             steps {
                 checkout([
                     $class: 'GitSCM',
-                    branches: [[name: "*/${params.BRANCH}" ]],
+                    branches: [[name: "*/${params.BRANCH}"]],
                     userRemoteConfigs: [[
                         url: 'https://github.com/AASHRAYANKASETTY/postiz-app.git',
                         credentialsId: 'gh-pat'
