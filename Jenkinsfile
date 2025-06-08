@@ -70,13 +70,22 @@ spec:
 
     environment {
         NODE_VERSION = '20.17.0'
-        BUILD_TIMESTAMP = sh(script: 'date +%Y%m%d-%H%M', returnStdout: true).trim()
-        CLEAN_BRANCH = "${params.BRANCH}".replaceAll('/', '-')
-        BUILD_REF = "${CLEAN_BRANCH}-${env.BUILD_ID}-${BUILD_TIMESTAMP}"
-        IMAGE_TAG = "xtremeverveacr.azurecr.io/postiz:${BUILD_REF}"
     }
 
     stages {
+        stage('Set Metadata') {
+            steps {
+                script {
+                    def ts = sh(script: 'date +%Y%m%d-%H%M', returnStdout: true).trim()
+                    def cleanBranch = params.BRANCH.replaceAll('/', '-')
+                    env.CLEAN_BRANCH = cleanBranch
+                    env.BUILD_TIMESTAMP = ts
+                    env.BUILD_REF = "${cleanBranch}-${env.BUILD_ID}-${ts}"
+                    env.IMAGE_TAG = "xtremeverveacr.azurecr.io/postiz:${env.BUILD_REF}"
+                }
+            }
+        }
+
         stage('Checkout Repository') {
             steps {
                 checkout([
@@ -137,7 +146,7 @@ spec:
 
     post {
         success {
-            echo '✅ Build completed successfully!'
+            echo "✅ Build completed: ${env.IMAGE_TAG}"
         }
         failure {
             echo '❌ Build failed!'
