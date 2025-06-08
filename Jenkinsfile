@@ -81,7 +81,7 @@ spec:
             steps {
                 checkout([
                     $class: 'GitSCM',
-                    branches: [[name: "*/${params.BRANCH}"]],
+                    branches: [[name: "${params.BRANCH}"]],
                     userRemoteConfigs: [[
                         url: 'https://github.com/AASHRAYANKASETTY/postiz-app.git',
                         credentialsId: 'gh-pat'
