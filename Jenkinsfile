@@ -84,7 +84,8 @@ spec:
                     branches: [[name: "${params.BRANCH}"]],
                     userRemoteConfigs: [[
                         url: 'https://github.com/AASHRAYANKASETTY/postiz-app.git',
-                        credentialsId: 'gh-pat'
+                        credentialsId: 'gh-pat',
+                        refspec: '+refs/heads/*:refs/remotes/origin/*'
                     ]]
                 ])
             }
