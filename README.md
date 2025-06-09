@@ -108,7 +108,7 @@ kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.architecture}'
 ```
 AKS typically defaults to `amd64` nodes, but some pools may use `arm64`. Run `kubectl get nodes -o wide` and check the ARCH column to confirm your architecture.
 
-Then build with Docker Buildx and specify the matching platform. To support both AKS and your local machine, build a multi‑architecture image:
+Then build with Docker Buildx and specify the matching platform. To support both AKS and your local machine, build a multi‑architecture image and verify that each architecture has been published:
 
 ```bash
 docker buildx create --use          # run once to initialize buildx
@@ -116,6 +116,7 @@ docker buildx build --platform linux/amd64,linux/arm64 \
   -f Dockerfile.dev \
   -t <registry>/<image>:<tag> \
   --push .
+docker buildx imagetools inspect <registry>/<image>:<tag> | grep Architecture
 ```
 
 If your cluster uses only one architecture, you can specify a single platform instead of both. Use `--load` rather than `--push` when building solely for local testing so the image is loaded into your Docker daemon instead of pushed to a registry.
