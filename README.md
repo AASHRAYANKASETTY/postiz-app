@@ -118,6 +118,7 @@ docker buildx build --platform linux/amd64 \
 ```
 
 Add `linux/arm64` to `--platform` if your cluster uses ARM64 nodes. Buildx will produce a multi-architecture image compatible with both AKS and your local machine.
+Use `--load` instead of `--push` when building solely for local testing so the image is added to your Docker daemon.
 
 ## Invest in the Postiz Coin :)
 

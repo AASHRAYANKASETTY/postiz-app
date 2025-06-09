@@ -11,5 +11,7 @@ PLATFORM="${PLATFORM:-linux/amd64}"
 docker buildx inspect >/dev/null 2>&1 || docker buildx create --use
 
 docker rmi localhost/postiz || true
-docker buildx build --platform "$PLATFORM" --target dist -t localhost/postiz -f Dockerfile.dev .
-docker buildx build --platform "$PLATFORM" --target devcontainer -t localhost/postiz-devcontainer -f Dockerfile.dev .
+docker buildx build --load --platform "$PLATFORM" \
+  --target dist -t localhost/postiz -f Dockerfile.dev .
+docker buildx build --load --platform "$PLATFORM" \
+  --target devcontainer -t localhost/postiz-devcontainer -f Dockerfile.dev .
