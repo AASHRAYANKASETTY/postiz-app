@@ -10,15 +10,19 @@ service:
   port: 80
 
 ingress:
-  enabled: false
-  className: ""
-  annotations: {}
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
   hosts:
-    - host: postiz.local
+    - host: social-scheduler.xtremeverve.com
       paths:
         - path: /
           pathType: Prefix
-  tls: []
+  tls:
+    - hosts:
+        - social-scheduler.xtremeverve.com
+      secretName: social-scheduler-tls
 
 resources:
   limits:
