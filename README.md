@@ -101,7 +101,13 @@ To have the project up and running, please follow the [Quick Start Guide](https:
 
 ### Building Docker Images
 
-If you build the Docker image on a machine with a different CPU architecture than your AKS nodes, the container may fail to start with an `exec format error`. Build with Docker Buildx and specify the target platform:
+If you build the Docker image on a machine with a different CPU architecture than your AKS nodes, the container will fail to start with an `exec format error`. First check the architecture of your cluster nodes:
+
+```bash
+kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.architecture}'
+```
+
+Then build with Docker Buildx and specify the matching platform (or a comma separated list for multi‑arch):
 
 ```bash
 docker buildx create --use          # run once to initialize buildx

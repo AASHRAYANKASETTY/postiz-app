@@ -2,7 +2,9 @@
 
 set -o xtrace
 
-# Target platform for the image. Defaults to linux/amd64 which works on most AKS nodes.
+# Target platform for the image. Set PLATFORM to linux/arm64 when your cluster
+# uses ARM64 nodes. A comma separated list (e.g. linux/amd64,linux/arm64) can be
+# used to build a multi-architecture image.
 PLATFORM="${PLATFORM:-linux/amd64}"
 
 # Ensure buildx is initialized
