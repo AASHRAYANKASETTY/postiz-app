@@ -14,4 +14,4 @@ while ! nc -z localhost 3000; do
   sleep 1
 done
 
-caddy run --config /app/Caddyfile
+exec caddy run --config /app/Caddyfile
