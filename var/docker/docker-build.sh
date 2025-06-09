@@ -2,16 +2,10 @@
 
 set -o xtrace
 
-# Target platform for the image. Set PLATFORM to linux/arm64 when your cluster
-# uses ARM64 nodes. A comma separated list (e.g. linux/amd64,linux/arm64) can be
-# used to build a multi-architecture image.
-PLATFORM="${PLATFORM:-linux/amd64}"
-
-# Ensure buildx is initialized
-docker buildx inspect >/dev/null 2>&1 || docker buildx create --use
-
+# Clean up existing image
 docker rmi localhost/postiz || true
-docker buildx build --load --platform "$PLATFORM" \
-  --target dist -t localhost/postiz -f Dockerfile.dev .
-docker buildx build --load --platform "$PLATFORM" \
-  --target devcontainer -t localhost/postiz-devcontainer -f Dockerfile.dev .
+
+# Build with explicit platform targeting AMD64
+docker build --platform linux/amd64 --target dist -t localhost/postiz -f Dockerfile.dev .
+docker build --platform linux/amd64 --target devcontainer -t localhost/postiz-devcontainer -f Dockerfile.dev .
+
