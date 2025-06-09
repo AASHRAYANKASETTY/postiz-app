@@ -106,6 +106,7 @@ If you build the Docker image on a machine with a different CPU architecture tha
 ```bash
 kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.architecture}'
 ```
+AKS typically defaults to `amd64` nodes, but some pools may use `arm64`. Run `kubectl get nodes -o wide` and check the ARCH column to confirm your architecture.
 
 Then build with Docker Buildx and specify the matching platform (or a comma separated list for multi‑arch):
 
