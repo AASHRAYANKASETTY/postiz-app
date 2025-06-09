@@ -1,0 +1,25 @@
+apiVersion: v2
+name: postiz
+version: 0.1.0
+appVersion: "1.0"
+description: Postiz Helm chart for AKS deployment
+keywords:
+  - postiz
+  - social media
+  - marketing
+home: https://postiz.com
+sources:
+  - https://github.com/xtremeverve/postiz
+maintainers:
+  - name: Postiz Maintainers
+    email: dev@postiz.com
+type: application
+dependencies:
+  - name: postgresql
+    version: 16.7.10
+    repository: oci://xtremeverveacr.azurecr.io/helm
+    condition: postgresql.enabled
+  - name: redis
+    version: 21.2.0
+    repository: oci://xtremeverveacr.azurecr.io/helm
+    condition: redis.enabled
