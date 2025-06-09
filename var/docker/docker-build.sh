@@ -14,10 +14,14 @@ else
   OUT_FLAG="--load"
 fi
 
+# Optional image names. Override these to push somewhere other than localhost.
+IMAGE="${IMAGE:-localhost/postiz}"
+DEVIMAGE="${DEVIMAGE:-localhost/postiz-devcontainer}"
+
+docker rmi "$IMAGE" || true
 docker buildx build $OUT_FLAG --platform "$PLATFORM" \
-docker buildx build $OUT_FLAG --platform "$PLATFORM" \
-  -t localhost/postiz \
-  -f Dockerfile.dev .
+  --target dist -t "$IMAGE" -f Dockerfile.dev .
+  --target devcontainer -t "$DEVIMAGE" -f Dockerfile.dev .
 
 docker buildx build \
   --platform linux/amd64 \

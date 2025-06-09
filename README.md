@@ -121,6 +121,17 @@ docker buildx imagetools inspect <registry>/<image>:<tag> | grep Architecture
 
 If your cluster uses only one architecture, you can specify a single platform instead of both. Use `--load` rather than `--push` when building solely for local testing so the image is loaded into your Docker daemon instead of pushed to a registry.
 
+You can also run the helper script which wraps these commands:
+
+```bash
+# Build and push a multi-architecture image
+PLATFORM=linux/amd64,linux/arm64 OUTPUT=push IMAGE=<registry>/<image>:<tag> \
+  ./var/docker/docker-build.sh
+
+# Local build for the current architecture
+./var/docker/docker-build.sh
+```
+
 ## Invest in the Postiz Coin :)
 
 DMsTbeCfX1crgAse5tver98KAMarPWeP3d6U3Gmmpump
