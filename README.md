@@ -99,6 +99,20 @@
 
 To have the project up and running, please follow the [Quick Start Guide](https://docs.postiz.com/quickstart)
 
+### Building Docker Images
+
+If you build the Docker image on a machine with a different CPU architecture than your AKS nodes, the container may fail to start with an `exec format error`. Build with Docker Buildx and specify the target platform:
+
+```bash
+docker buildx create --use          # run once to initialize buildx
+docker buildx build --platform linux/amd64 \
+  -f Dockerfile.dev \
+  -t <registry>/<image>:<tag> \
+  --push .
+```
+
+Add `linux/arm64` to `--platform` if your cluster uses ARM64 nodes. Buildx will produce a multi-architecture image compatible with both AKS and your local machine.
+
 ## Invest in the Postiz Coin :)
 
 DMsTbeCfX1crgAse5tver98KAMarPWeP3d6U3Gmmpump
