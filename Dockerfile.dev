@@ -1,19 +1,32 @@
-FROM node:20-alpine3.19
-RUN apk add --no-cache g++ make py3-pip supervisor bash caddy
+# Use BuildKit build context awareness to ensure correct platform
+FROM --platform=$BUILDPLATFORM node:20-alpine3.19
+
+# Install all necessary packages + dos2unix to fix line endings
+RUN apk add --no-cache g++ make py3-pip supervisor bash caddy dos2unix
+
+# Install global npm tools
 RUN npm --no-update-notifier --no-fund --global install pnpm@10.6.1 pm2
 
 WORKDIR /app
 
+# Copy full source
 COPY . /app
+
+# Copy config and scripts
 COPY var/docker/supervisord.conf /etc/supervisord.conf
 COPY var/docker/Caddyfile /app/Caddyfile
-COPY var/docker/entrypoint.sh /app/entrypoint.sh
+COPY var/docker/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY var/docker/supervisord/caddy.conf /etc/supervisor.d/caddy.conf
-RUN chmod +x /app/entrypoint.sh
 
+# Fix line endings and permissions for entrypoint script
+RUN dos2unix /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Install dependencies and build
 RUN pnpm install
 RUN pnpm run build
 
-EXPOSE 4200
+# Expose necessary ports
+EXPOSE 4200 3000 80
 
-CMD ["pnpm", "run", "pm2"]
+# Set entrypoint (must match what's in your Kubernetes pod logs)
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
