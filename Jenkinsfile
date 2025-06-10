@@ -120,7 +120,7 @@ spec:
         stage('Build Project') {
             steps {
                 sh '''
-                    NODE_OPTIONS="--max-old-space-size=4096" pnpm -r --workspace-concurrency=1 \
+                    NODE_OPTIONS="--max-old-space-size=8192" pnpm -r --workspace-concurrency=1 \
                     --filter ./apps/frontend \
                     --filter ./apps/backend \
                     --filter ./apps/workers \
@@ -136,12 +136,12 @@ spec:
                         sh '''
                             echo "$ACR_PASS" | docker login xtremeverveacr.azurecr.io -u "$ACR_USER" --password-stdin
 
-                            docker buildx create --use --name amd64arm64builder || true
+                            docker buildx create --use --name arm64builder || true
                             docker buildx inspect --bootstrap
-                            
+
                             docker buildx build \
-                              --platform linux/arm64,linux/amd64 \
-                              -t xtremeverveacr.azurecr.io/postiz:${BUILD_TAG} \
+                              --platform linux/arm64 \
+                              -t $IMAGE_TAG \
                               -f Dockerfile.dev \
                               --push .
                         '''
