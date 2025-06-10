@@ -136,13 +136,13 @@ spec:
                         sh '''
                             echo "$ACR_PASS" | docker login xtremeverveacr.azurecr.io -u "$ACR_USER" --password-stdin
 
-                            docker buildx create --use --name amd64builder || true
+                            docker buildx create --use --name amd64arm64builder || true
                             docker buildx inspect --bootstrap
-
+                            
                             docker buildx build \
-                              --platform linux/amd64,linux/arm64 \
+                              --platform linux/arm64,linux/amd64 \
+                              -t xtremeverveacr.azurecr.io/postiz:${BUILD_TAG} \
                               -f Dockerfile.dev \
-                              -t $IMAGE_TAG \
                               --push .
                         '''
                     }
