@@ -1,5 +1,5 @@
 # Build specifically for linux/arm64 platform
-FROM --platform=linux/arm64 node:20-alpine3.19
+FROM --platform=$BUILDPLATFORM node:20-alpine3.19
 
 # Install essential build tools and runtime support
 RUN apk add --no-cache \
