@@ -140,7 +140,7 @@ spec:
                             docker buildx inspect --bootstrap
 
                             docker buildx build \
-                              --platform linux/amd64 \
+                              --platform linux/amd64,linux/arm64 \
                               -f Dockerfile.dev \
                               -t $IMAGE_TAG \
                               --push .
